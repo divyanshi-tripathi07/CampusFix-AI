@@ -136,6 +136,7 @@ def init_db() -> None:
         db.execute("ALTER TABLE complaints ADD COLUMN duplicate_group_id INTEGER")
     except sqlite3.OperationalError:
         pass
+    db.execute("UPDATE users SET name = ? WHERE email = ?", ("Divyanshi Tripathi", "admin@northbridge.edu"))
     db.commit()
     db.close()
 
@@ -147,7 +148,7 @@ def seed_db() -> None:
             return
         now = utc_now().isoformat()
         users = [
-            ("Arjun Kapoor", "admin@northbridge.edu", generate_password_hash("admin-demo"), "admin", "Operations"),
+            ("Divyanshi Tripathi", "admin@northbridge.edu", generate_password_hash("admin-demo"), "admin", "Operations"),
             ("Aarav Sharma", "student@northbridge.edu", generate_password_hash("student-demo"), "student", None),
             ("Nisha Verma", "maintenance@northbridge.edu", generate_password_hash("staff-demo"), "maintenance", "Facilities Response"),
         ]

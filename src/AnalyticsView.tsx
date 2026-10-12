@@ -30,10 +30,11 @@ export function AnalyticsView() {
   function exportReport() {
     const csv = ['Issue,Category,Priority,Status,Location', 'CF-1048,Wi-Fi & Network,High,In Progress,Engineering Block', 'CF-1045,Water Supply,Critical,Assigned,Science Block'].join('\n')
     const link = document.createElement('a')
-    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    link.href = url
     link.download = 'campusfix-analytics.csv'
     link.click()
-    URL.revokeObjectURL(link.href)
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   return <div className="analytics-view">

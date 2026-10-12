@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   Activity,
@@ -20,7 +20,6 @@ import {
   CalendarDays,
   MapPin,
   MessageSquareText,
-  Plus,
   Search,
   Send,
   SlidersHorizontal,
@@ -33,6 +32,7 @@ import {
 } from 'lucide-react'
 import './styles.css'
 import { AnalyticsView } from './AnalyticsView'
+import { WorkspacePage } from './WorkspacePage'
 import { Bar, Doughnut, Line } from 'react-chartjs-2'
 import { CategoryScale, Chart as ChartJS, Filler, Legend, LinearScale, LineElement, BarElement, ArcElement, PointElement, Tooltip } from 'chart.js'
 
@@ -82,6 +82,22 @@ function App() {
   const [filter, setFilter] = useState<'All' | Priority>('All')
   const [query, setQuery] = useState('')
   const [feedback, setFeedback] = useState(0)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  useEffect(() => {
+    if (!showReport) return
+    const browseButton = document.querySelector('.upload-zone .secondary-button')
+    const fileInput = document.querySelector<HTMLInputElement>('#complaint-image-input')
+    if (!browseButton || !fileInput) return
+    const openFilePicker = () => fileInput.click()
+    browseButton.addEventListener('click', openFilePicker)
+    return () => browseButton.removeEventListener('click', openFilePicker)
+  }, [showReport])
+
+  useEffect(() => {
+    const helperText = document.querySelector('.upload-zone span')
+    if (helperText) helperText.textContent = selectedFile ? selectedFile.name : 'Optional · JPG or PNG up to 10MB'
+  }, [selectedFile])
 
   const selectedComplaint = complaints.find((complaint) => complaint.id === selectedId) ?? complaints[0]
   const visibleComplaints = useMemo(() => complaints.filter((complaint) => {
@@ -111,38 +127,54 @@ function App() {
     setShowReport(false)
   }
 
+  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      event.target.value = ''
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      event.target.value = ''
+      return
+    }
+    setSelectedFile(file)
+  }
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${activeNav !== 'Overview' ? 'workspace-mode' : ''}`}>
+      <input id="complaint-image-input" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} />
       <aside className="sidebar">
         <div className="brand-mark"><span>CF</span></div>
         <div className="brand-copy"><strong>CampusFix</strong><small>AI OPERATIONS</small></div>
-        <div className="workspace-switcher"><div className="campus-avatar">NI</div><div><strong>Northbridge Institute</strong><small>Operations workspace</small></div><ChevronDown size={16} /></div>
+        <div className="workspace-switcher"><div className="campus-avatar">UC</div><div><strong>Universal College Of Engineering</strong><small>Operations workspace</small></div><ChevronDown size={16} /></div>
         <nav className="primary-nav" aria-label="Primary navigation">
           <div className="nav-label">WORKSPACE</div>
           {navItems.map(({ label, icon: Icon, count }) => <button className={`nav-item ${activeNav === label ? 'active' : ''}`} onClick={() => setActiveNav(label)} key={label}><Icon size={18} /><span>{label}</span>{count && <em>{count}</em>}</button>)}
           <div className="nav-label nav-label-spaced">SYSTEM</div>
-          <button className="nav-item"><BrainCircuit size={18} /><span>AI insights</span><span className="beta">BETA</span></button>
-          <button className="nav-item"><Settings2 size={18} /><span>Settings</span></button>
+          <button className={`nav-item ${activeNav === 'AI insights' ? 'active' : ''}`} onClick={() => setActiveNav('AI insights')}><BrainCircuit size={18} /><span>AI insights</span><span className="beta">BETA</span></button>
+          <button className={`nav-item ${activeNav === 'Settings' ? 'active' : ''}`} onClick={() => setActiveNav('Settings')}><Settings2 size={18} /><span>Settings</span></button>
         </nav>
         <div className="sidebar-footer"><div className="status-dot" /> <span>All systems operational</span><ArrowUpRight size={14} /></div>
       </aside>
 
       <main className="main-content">
-        <header className="topbar"><div className="breadcrumbs"><span>Northbridge Institute</span><span>/</span><strong>{activeNav}</strong></div><div className="topbar-actions"><div className="search-wrap"><Search size={16} /><input aria-label="Search complaints" placeholder="Search issues..." value={query} onChange={(event) => setQuery(event.target.value)} /><kbd>⌘ K</kbd></div><button className="icon-button" aria-label="Notifications" onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} /><span className="notification-dot" /></button><div className="user-menu"><div className="user-avatar">AK</div><div><strong>Arjun Kapoor</strong><small>Administrator</small></div><ChevronDown size={15} /></div></div></header>
+        <header className="topbar"><div className="breadcrumbs"><span>Universal College Of Engineering</span><span>/</span><strong>{activeNav}</strong></div><div className="topbar-actions"><div className="search-wrap"><Search size={16} /><input aria-label="Search complaints" placeholder="Search issues..." value={query} onChange={(event) => setQuery(event.target.value)} /><kbd>⌘ K</kbd></div><button className="icon-button" aria-label="Notifications" onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} /><span className="notification-dot" /></button><div className="user-menu"><div className="user-avatar">DT</div><div><strong>Divyanshi Tripathi</strong><small>Administrator</small></div><ChevronDown size={15} /></div></div></header>
         {showNotifications && <div className="notification-popover"><div className="popover-header"><strong>Notifications</strong><span>3 new</span></div><div className="notification-item"><div className="notification-icon orange"><AlertTriangle size={15} /></div><div><strong>Critical issue needs review</strong><p>Water leak at Science Block · 38 min ago</p></div></div><div className="notification-item"><div className="notification-icon green"><Check size={15} /></div><div><strong>Issue resolved</strong><p>Lighting outage in Library · yesterday</p></div></div></div>}
 
         <section className="content-wrap">
-          {activeNav === 'Analytics' && <AnalyticsView />}
-          <div className="page-heading"><div><p className="eyebrow"><span className="pulse" /> MONDAY, 12 OCTOBER 2026</p><h1>Good morning, Arjun <span>✦</span></h1><p className="subheading">Here is what needs your attention across campus today.</p></div><button className="primary-button" onClick={() => setShowReport(true)}><Plus size={18} /> Report an issue</button></div>
+          {activeNav === 'Overview' ? <>
+          <div className="page-heading"><div><p className="eyebrow"><span className="pulse" /> MONDAY, 12 OCTOBER 2026</p><h1>Good morning, Divyanshi <span>✦</span></h1><p className="subheading">Here is what needs your attention across campus today.</p></div><button className="primary-button" onClick={() => setShowReport(true)}>Report an issue</button></div>
 
           <section className="stat-grid"><StatCard icon={<ClipboardList size={19} />} label="Open complaints" value="24" detail="12% from last week" trend="up" color="blue" /><StatCard icon={<Clock3 size={19} />} label="Avg. resolution time" value="2.4d" detail="0.6d faster this month" trend="down" color="mint" /><StatCard icon={<ShieldCheck size={19} />} label="Resolved this month" value="87%" detail="Above 80% target" trend="up" color="lavender" /><StatCard icon={<CircleHelp size={19} />} label="Needs review" value="5" detail="2 critical priority" trend="alert" color="yellow" /></section>
 
           <div className="dashboard-grid">
-            <section className="panel queue-panel"><div className="panel-heading"><div><p className="section-kicker">LIVE QUEUE</p><h2>Complaints needing attention</h2></div><button className="text-button">View all <ArrowUpRight size={15} /></button></div><div className="queue-toolbar"><div className="segmented-control">{(['All', 'Critical', 'High', 'Medium'] as const).map((item) => <button className={filter === item ? 'selected' : ''} onClick={() => setFilter(item)} key={item}>{item}{item !== 'All' && <span>{complaints.filter((complaint) => complaint.priority === item).length}</span>}</button>)}</div><button className="filter-button"><Filter size={15} /> Filters</button></div><div className="complaint-list">{visibleComplaints.map((complaint) => <ComplaintRow key={complaint.id} complaint={complaint} selected={complaint.id === selectedId} onClick={() => setSelectedId(complaint.id)} />)}</div></section>
+            <section className="panel queue-panel"><div className="panel-heading"><div><p className="section-kicker">LIVE QUEUE</p><h2>Complaints needing attention</h2></div><button className="text-button" onClick={() => setActiveNav('Complaints')}>View all <ArrowUpRight size={15} /></button></div><div className="queue-toolbar"><div className="segmented-control">{(['All', 'Critical', 'High', 'Medium'] as const).map((item) => <button className={filter === item ? 'selected' : ''} onClick={() => setFilter(item)} key={item}>{item}{item !== 'All' && <span>{complaints.filter((complaint) => complaint.priority === item).length}</span>}</button>)}</div><button className="filter-button"><Filter size={15} /> Filters</button></div><div className="complaint-list">{visibleComplaints.map((complaint) => <ComplaintRow key={complaint.id} complaint={complaint} selected={complaint.id === selectedId} onClick={() => setSelectedId(complaint.id)} />)}</div></section>
             <aside className="panel insight-panel"><div className="insight-header"><div className="ai-symbol"><Sparkles size={17} /></div><div><p className="section-kicker">AI INSIGHTS</p><h2>What the data is telling you</h2></div><button className="icon-button subtle"><ArrowUpRight size={16} /></button></div><div className="insight-feature"><div className="insight-feature-top"><div className="trend-icon"><Activity size={19} /></div><span className="insight-tag">RECURRING PATTERN</span></div><h3>North wing network issues are up 34%</h3><p>14 reports in 7 days, concentrated around Engineering Block floors 2–3. This cluster may need an infrastructure audit.</p><button className="insight-link" onClick={() => { setSelectedId('CF-1048'); setActiveNav('Issue clusters') }}>Explore cluster <ArrowUpRight size={14} /></button></div><div className="insight-feature secondary"><div className="mini-chart"><span style={{ height: '38%' }} /><span style={{ height: '55%' }} /><span style={{ height: '42%' }} /><span style={{ height: '68%' }} /><span style={{ height: '61%' }} /><span style={{ height: '84%' }} /><span style={{ height: '96%' }} /></div><div><h3>Most affected location</h3><p>Engineering Block <strong>· 28 reports</strong></p></div></div><div className="ai-footnote"><BrainCircuit size={14} /> AI suggestions are reviewed by your team before action.</div></aside>
           </div>
 
-          <section className="lower-grid"><div className="panel activity-panel"><div className="panel-heading"><div><p className="section-kicker">ACTIVITY</p><h2>Recent updates</h2></div><button className="text-button">See activity <ArrowUpRight size={15} /></button></div><div className="timeline"><TimelineItem color="orange" title="Critical complaint assigned" detail="CF-1045 · Facilities Response" time="38 min ago" /><TimelineItem color="blue" title="14 reports grouped into a cluster" detail="North wing network issues · NET-22" time="1 hr ago" /><TimelineItem color="green" title="Complaint marked resolved" detail="CF-1030 · Library lighting" time="3 hrs ago" /></div></div><div className="panel team-panel"><div className="panel-heading"><div><p className="section-kicker">TEAM LOAD</p><h2>Department capacity</h2></div><button className="icon-button subtle"><Settings2 size={16} /></button></div><TeamLoad name="IT Infrastructure" value={72} color="blue" /><TeamLoad name="Facilities Response" value={48} color="orange" /><TeamLoad name="Campus Services" value={31} color="green" /><div className="team-note"><Users size={15} /> 4 teams active <span>·</span> 12 staff online</div></div></section>
+          <section className="lower-grid"><div className="panel activity-panel"><div className="panel-heading"><div><p className="section-kicker">ACTIVITY</p><h2>Recent updates</h2></div><button className="text-button" onClick={() => setActiveNav('Complaints')}>See activity <ArrowUpRight size={15} /></button></div><div className="timeline"><TimelineItem color="orange" title="Critical complaint assigned" detail="CF-1045 · Facilities Response" time="38 min ago" /><TimelineItem color="blue" title="14 reports grouped into a cluster" detail="North wing network issues · NET-22" time="1 hr ago" /><TimelineItem color="green" title="Complaint marked resolved" detail="CF-1030 · Library lighting" time="3 hrs ago" /></div></div><div className="panel team-panel"><div className="panel-heading"><div><p className="section-kicker">TEAM LOAD</p><h2>Department capacity</h2></div><button className="icon-button subtle" onClick={() => setActiveNav('Teams')}><Settings2 size={16} /></button></div><TeamLoad name="IT Infrastructure" value={72} color="blue" /><TeamLoad name="Facilities Response" value={48} color="orange" /><TeamLoad name="Campus Services" value={31} color="green" /><div className="team-note"><Users size={15} /> 4 teams active <span>·</span> 12 staff online</div></div></section>
+          </> : activeNav === 'Analytics' ? <AnalyticsView /> : <WorkspacePage section={activeNav} complaints={complaints} query={query} onQueryChange={setQuery} onSelect={setSelectedId} />}
         </section>
       </main>
 
